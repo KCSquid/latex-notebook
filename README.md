@@ -1,0 +1,1 @@
+Minimalist, but very functional, jupyter-style notebook for LaTeX with live previews, similar to Desmos.
