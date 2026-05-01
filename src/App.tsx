@@ -27,17 +27,31 @@ interface NotebookRow {
 }
 
 const App: React.FC = () => {
-  const [title, setTitle] = useState("Untitled Notebook");
-  const [rows, setRows] = useState<NotebookRow[]>([
-    {
-      id: crypto.randomUUID(),
-      type: "math",
-      mode: "math",
-      content: "",
-      label: "",
-    },
-  ]);
+  const [title, setTitle] = useState(() => {
+    const saved = window.localStorage.getItem("notebook-title");
+    return saved || "Untitled Notebook";
+  });
+  const [rows, setRows] = useState<NotebookRow[]>(() => {
+    const saved = window.localStorage.getItem("notebook-rows");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        // ignore
+      }
+    }
+    return [
+      {
+        id: crypto.randomUUID(),
+        type: "math",
+        mode: "math",
+        content: "",
+        label: "",
+      },
+    ];
+  });
   const [focusedId, setFocusedId] = useState<string | null>(null);
+  const [scrollToId, setScrollToId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const fieldRefs = useRef<Record<string, HTMLElement | null>>({});
 
@@ -57,12 +71,30 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
+    if (!scrollToId) return;
+    const el = fieldRefs.current[scrollToId] as any;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      el.scrollIntoView?.({ behavior: "smooth", block: "center" });
+      el.focus?.();
+      setScrollToId(null);
+    });
+  }, [scrollToId]);
+
+  useEffect(() => {
     if (!focusedId) return;
     const el = fieldRefs.current[focusedId] as any;
     if (!el) return;
     requestAnimationFrame(() => {
       el.focus?.();
     });
+  }, [rows, focusedId]);
+
+  useEffect(() => {
+    window.localStorage.setItem("notebook-title", title);
+  }, [title]);
+  useEffect(() => {
+    window.localStorage.setItem("notebook-rows", JSON.stringify(rows));
   }, [rows]);
 
   const addMathRow = (index: number, isSeparator: boolean = false) => {
@@ -91,6 +123,7 @@ const App: React.FC = () => {
 
     setRows(newRows);
     setFocusedId(newId);
+    setScrollToId(newId);
   };
 
   const deleteRow = (index: number) => {
@@ -102,6 +135,7 @@ const App: React.FC = () => {
     newRows = newRows.filter((row, i) => {
       if (row.type === "separator") {
         const nextRow = newRows[i + 1];
+        index--;
         return nextRow && nextRow.type === "math";
       }
       return true;
@@ -174,6 +208,16 @@ const App: React.FC = () => {
             }}
           >
             EXPORT
+          </button>
+          <button
+            style={styles.navLink}
+            onClick={() => {
+              window.localStorage.removeItem("notebook-title");
+              window.localStorage.removeItem("notebook-rows");
+              window.location.reload();
+            }}
+          >
+            DELETE
           </button>
         </div>
       </header>
@@ -302,7 +346,7 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: "#4285f4",
     marginTop: "4px",
   },
-  nav: { display: "flex", gap: "24px" },
+  nav: { display: "flex", gap: "16px" },
   navLink: {
     fontSize: "12px",
     color: "#aaa",
@@ -311,6 +355,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: "none",
     letterSpacing: "1px",
     fontWeight: 500,
+    fontFamily: "Times New Roman",
   },
   container: {
     maxWidth: "750px",
@@ -360,12 +405,13 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#ccd",
     marginTop: "25px",
     letterSpacing: "2px",
+    paddingBottom: "15%",
   },
   textArea: {
     width: "100%",
     border: "none",
     fontSize: "20px",
-    padding: "20px 0px 10px 0px",
+    padding: "20px 0px 0px 0px",
     background: "transparent",
     outline: "none",
     resize: "vertical",
