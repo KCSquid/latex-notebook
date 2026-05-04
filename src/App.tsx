@@ -135,7 +135,7 @@ const App: React.FC = () => {
     newRows = newRows.filter((row, i) => {
       if (row.type === "separator") {
         const nextRow = newRows[i + 1];
-        index--;
+        // index--;
         return nextRow && nextRow.type === "math";
       }
       return true;
