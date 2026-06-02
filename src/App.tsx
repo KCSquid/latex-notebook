@@ -1,21 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import "mathlive";
 
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      "math-field": React.DetailedHTMLProps<
-        React.HTMLAttributes<HTMLElement>,
-        HTMLElement
-      > & {
-        onInput?: (e: any) => void;
-        onFocus?: (e: any) => void;
-        onBlur?: (e: any) => void;
-      };
-    }
-  }
-}
-
 type RowMode = "math" | "text";
 
 interface NotebookRow {
@@ -72,7 +57,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (!scrollToId) return;
-    const el = fieldRefs.current[scrollToId] as any;
+    const el = fieldRefs.current[scrollToId];
     if (!el) return;
     requestAnimationFrame(() => {
       el.scrollIntoView?.({ behavior: "smooth", block: "center" });
@@ -83,7 +68,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (!focusedId) return;
-    const el = fieldRefs.current[focusedId] as any;
+    const el = fieldRefs.current[focusedId];
     if (!el) return;
     requestAnimationFrame(() => {
       el.focus?.();
@@ -148,7 +133,7 @@ const App: React.FC = () => {
     setFocusedId(nextId);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent, id: string, index: number) => {
+  const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       addMathRow(index, false);
@@ -277,17 +262,19 @@ const App: React.FC = () => {
                         el.style.height = el.scrollHeight + "px";
                       }
                     }}
-                    onKeyDown={(e) => handleKeyDown(e, row.id, index)}
+                    onKeyDown={(e) => handleKeyDown(e, index)}
                     onFocus={() => setFocusedId(row.id)}
                     onBlur={() => setFocusedId(null)}
                   />
                 ) : (
                   <math-field
-                    ref={(el) => (fieldRefs.current[row.id] = el)}
+                    ref={(el) => {
+                      fieldRefs.current[row.id] = el;
+                    }}
                     style={styles.mathField}
                     value={row.content}
-                    onInput={(e: any) => {
-                      const value = e.target.value;
+                    onInput={(e) => {
+                      const value = (e.target as HTMLInputElement).value;
                       const newMode = detectMode(value);
                       setRows((prev) =>
                         prev.map((r) =>
@@ -297,7 +284,7 @@ const App: React.FC = () => {
                         ),
                       );
                     }}
-                    onKeyDown={(e: any) => handleKeyDown(e, row.id, index)}
+                    onKeyDown={(e) => handleKeyDown(e, index)}
                     onFocus={() => setFocusedId(row.id)}
                     onBlur={() => setFocusedId(null)}
                   />
